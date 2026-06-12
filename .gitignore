@@ -1,0 +1,55 @@
+# --- OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
+
+# --- Node
+node_modules/
+.pnpm-store/
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# --- Rust / Tauri
+app/src-tauri/target/
+app/src-tauri/gen/
+target/
+
+# --- Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+build/
+*.egg
+
+# --- Mojimaru models / outputs
+models/
+*.onnx
+*.pt
+*.pth
+*.safetensors
+out/
+output/
+.translations_cache/
+
+# --- Logs / env
+*.log
+.env
+.env.*
+!.env.example
+
+# --- Excluded docs and internal specs
+AGENTS.md
+docs/
+*.spec
+

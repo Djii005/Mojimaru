@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mojimaru"
+version = "0.1.0"
+description = "Mojimaru ML pipeline — bubble detection, CJK OCR, translation, and overlay typesetting for manga."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "AJ", email = "suryaadjii17@gmail.com" }]
+keywords = ["manga", "ocr", "translation", "tauri", "japanese", "chinese", "korean"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Multimedia :: Graphics",
+  "Topic :: Scientific/Engineering :: Image Recognition",
+]
+dependencies = [
+  "pillow>=10.2",
+  "numpy>=1.26",
+  "pydantic>=2.6",
+  "click>=8.1",
+  "rich>=13.7",
+]
+
+[project.optional-dependencies]
+# Real ML backends. Kept optional so the scaffold installs cleanly on CI.
+manga-ocr = ["manga-ocr>=0.1.11"]
+paddle = ["paddleocr>=2.7", "paddlepaddle>=2.6"]
+detect = ["ultralytics>=8.1"]
+inpaint = ["opencv-python-headless>=4.9"]
+ml = [
+  "mojimaru[manga-ocr]",
+  "mojimaru[paddle]",
+  "mojimaru[detect]",
+  "mojimaru[inpaint]",
+]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=4.1",
+  "ruff>=0.4",
+  "mypy>=1.9",
+]
+
+[project.scripts]
+mojimaru = "mojimaru.cli:main"
+
+[project.urls]
+Repository = "https://github.com/Djii005/Mojimaru"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mojimaru"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+markers = [
+    "ml: requires ML backends (transformers, torch, etc.) — skipped in CI",
+]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+explicit_package_bases = true
+mypy_path = "src"

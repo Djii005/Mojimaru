@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    font-family: theme("fontFamily.sans");
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-2xl border border-washi-900/80 bg-ink-soft/70 backdrop-blur-sm shadow-panel;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-shu-500 px-4 py-2 text-washi-50 font-medium transition hover:bg-shu-400 active:bg-shu-600 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-shu-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-washi-900 px-4 py-2 text-washi-100 transition hover:bg-washi-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-washi-400/40;
+  }
+  .field-label {
+    @apply text-xs uppercase tracking-widest text-washi-400;
+  }
+  .field-input {
+    @apply w-full rounded-lg border border-washi-900 bg-ink px-3 py-2 text-sm text-washi-100 placeholder-washi-500 focus:outline-none focus:border-shu-500;
+  }
+}
