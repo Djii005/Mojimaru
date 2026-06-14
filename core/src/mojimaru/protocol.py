@@ -1,10 +1,3 @@
-"""JSON IPC protocol between the Tauri shell and the Python sidecar.
-
-Wire format: newline-delimited JSON over stdin/stdout. Each line is one message
-with a top-level discriminator ``"kind"``. The Tauri shell sends Requests; the
-sidecar replies with Events and a final Response sharing the same ``"id"``.
-"""
-
 from __future__ import annotations
 
 from typing import Annotated, Literal
@@ -17,8 +10,6 @@ Orientation = Literal["horizontal", "vertical", "unknown"]
 
 
 class BBox(BaseModel):
-    """Pixel-space axis-aligned bounding box on the source image."""
-
     x: int
     y: int
     w: int
@@ -26,8 +17,6 @@ class BBox(BaseModel):
 
 
 class Bubble(BaseModel):
-    """A detected speech bubble (or other text region) on a page."""
-
     bbox: BBox
     orientation: Orientation = "unknown"
     confidence: float = 0.0
@@ -36,20 +25,12 @@ class Bubble(BaseModel):
     translated_text: str = ""
 
 
-# ---------- Backend status detail ----------
-
-
 class BackendDetail(BaseModel):
-    """Rich status for a single ML backend."""
-
     name: str
     installed: bool
     active: bool
     description: str = ""
     stage: str = ""
-
-
-# ---------- Requests (shell -> sidecar) ----------
 
 
 class _RequestBase(BaseModel):
@@ -62,8 +43,6 @@ class PingRequest(_RequestBase):
 
 
 class InfoRequest(_RequestBase):
-    """Ask the sidecar what backends/models are available locally."""
-
     kind: Literal["info"] = "info"
 
 
@@ -90,8 +69,6 @@ class CancelRequest(_RequestBase):
 
 
 class ConfigureRequest(_RequestBase):
-    """Set runtime configuration (e.g. translation provider/key)."""
-
     kind: Literal["configure"] = "configure"
     translate_provider: str | None = None
     translate_api_key: str | None = None
@@ -108,9 +85,6 @@ Request = Annotated[
     | ConfigureRequest,
     Field(discriminator="kind"),
 ]
-
-
-# ---------- Events / responses (sidecar -> shell) ----------
 
 
 class _MessageBase(BaseModel):

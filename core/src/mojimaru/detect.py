@@ -1,21 +1,9 @@
-"""Speech-bubble / text-region detection.
-
-Backends (tried in order):
-  1. RT-DETR comic detector (HuggingFace ``ogkalu/comic-text-and-bubble-detector``)
-     — a transformer-based model trained specifically on manga/comic pages.
-  2. Ultralytics YOLO — a custom-trained bubble detection model.
-  3. Stub — returns an empty list (safe fallback; no false positives).
-
-The old contour-based detection has been **removed** because it produced
-massive false positives (entire panels, character art) that destroyed
-images during inpainting.
-"""
-
 from __future__ import annotations
 
 import logging
 import os
 from pathlib import Path
+from typing import Any
 
 from PIL import Image
 
@@ -24,24 +12,15 @@ from mojimaru.protocol import BBox, Bubble, Orientation
 
 log = logging.getLogger(__name__)
 
-
-# ---------------------------------------------------------------------------
-# RT-DETR comic text & bubble detector (HuggingFace)
-# ---------------------------------------------------------------------------
-
-_rtdetr_model: object | None = None
-_rtdetr_processor: object | None = None
+_rtdetr_model: Any = None
+_rtdetr_processor: Any = None
 _rtdetr_attempted = False
 
-# Labels from ogkalu/comic-text-and-bubble-detector:
-#   0: 'bubble'       — empty bubble (no text) → skip
-#   1: 'text_bubble'  — speech bubble with text → detect
-#   2: 'text_free'    — floating text / SFX → detect
+
 _RTDETR_TEXT_LABELS = {"text_bubble", "text_free"}
 
 
-def _get_rtdetr() -> tuple[object, object] | None:
-    """Load the RT-DETR comic detector from HuggingFace."""
+def _get_rtdetr() -> Any:
     global _rtdetr_model, _rtdetr_processor, _rtdetr_attempted
     if _rtdetr_attempted:
         if _rtdetr_model is not None and _rtdetr_processor is not None:
@@ -50,7 +29,7 @@ def _get_rtdetr() -> tuple[object, object] | None:
     _rtdetr_attempted = True
 
     try:
-        from transformers import (  # type: ignore[import-untyped]
+        from transformers import (
             RTDetrForObjectDetection,
             RTDetrImageProcessor,
         )
@@ -70,7 +49,6 @@ def _get_rtdetr() -> tuple[object, object] | None:
 
 
 def _detect_rtdetr(image: Image.Image) -> list[Bubble] | None:
-    """Run RT-DETR detection. Returns text-containing regions only."""
     pair = _get_rtdetr()
     if pair is None:
         return None
@@ -81,12 +59,12 @@ def _detect_rtdetr(image: Image.Image) -> list[Bubble] | None:
         model, processor = pair
         img_rgb = image.convert("RGB")
 
-        inputs = processor(images=img_rgb, return_tensors="pt")  # type: ignore[operator]
+        inputs = processor(images=img_rgb, return_tensors="pt")
         with torch.no_grad():
-            outputs = model(**inputs)  # type: ignore[operator]
+            outputs = model(**inputs)
 
-        target_sizes = torch.tensor([img_rgb.size[::-1]])  # (H, W)
-        results = processor.post_process_object_detection(  # type: ignore[union-attr]
+        target_sizes = torch.tensor([img_rgb.size[::-1]])
+        results = processor.post_process_object_detection(
             outputs, target_sizes=target_sizes, threshold=0.3
         )[0]
 
@@ -94,9 +72,8 @@ def _detect_rtdetr(image: Image.Image) -> list[Bubble] | None:
         for score, label_id, box in zip(
             results["scores"], results["labels"], results["boxes"], strict=False
         ):
-            label_name = model.config.id2label[label_id.item()]  # type: ignore[union-attr]
+            label_name = model.config.id2label[label_id.item()]
 
-            # Only keep text-containing regions
             if label_name not in _RTDETR_TEXT_LABELS:
                 continue
 
@@ -118,7 +95,6 @@ def _detect_rtdetr(image: Image.Image) -> list[Bubble] | None:
             )
 
         if bubbles:
-            # Sort by reading order: top-to-bottom, right-to-left (manga)
             bubbles.sort(key=lambda b: (b.bbox.y // 100, -b.bbox.x))
             log.info("RT-DETR detected %d text region(s)", len(bubbles))
             return bubbles
@@ -129,16 +105,11 @@ def _detect_rtdetr(image: Image.Image) -> list[Bubble] | None:
         return None
 
 
-# ---------------------------------------------------------------------------
-# YOLO-based detection (requires ultralytics + a model file)
-# ---------------------------------------------------------------------------
-
-_yolo_model: object | None = None
+_yolo_model: Any = None
 _yolo_attempted = False
 
 
-def _get_yolo_model() -> object | None:
-    """Load a YOLO model if ultralytics is available and a weights file exists."""
+def _get_yolo_model() -> Any:
     global _yolo_model, _yolo_attempted
     if _yolo_attempted:
         return _yolo_model
@@ -146,9 +117,7 @@ def _get_yolo_model() -> object | None:
 
     model_path = os.environ.get("MOJIMARU_YOLO_MODEL")
     if not model_path:
-        # Project-local path: core/src/mojimaru/detect.py → core/models/yolo/
         project_models = get_base_dir() / "models" / "yolo"
-        # Check common locations (project-local first)
         for candidate in [
             project_models / "comic-text-detector.pt",
             project_models / "yolov8n.pt",
@@ -164,10 +133,11 @@ def _get_yolo_model() -> object | None:
         return None
 
     try:
-        from ultralytics import YOLO  # type: ignore[import-untyped]
+        import ultralytics
 
+        ultralytics_any: Any = ultralytics
         log.info("Loading YOLO model from %s", model_path)
-        _yolo_model = YOLO(model_path)
+        _yolo_model = ultralytics_any.YOLO(model_path)
         log.info("YOLO model loaded.")
         return _yolo_model
     except Exception:
@@ -176,7 +146,6 @@ def _get_yolo_model() -> object | None:
 
 
 def _detect_yolo(image: Image.Image) -> list[Bubble] | None:
-    """Run YOLO detection if available. Returns None if not available."""
     model = _get_yolo_model()
     if model is None:
         return None
@@ -185,7 +154,7 @@ def _detect_yolo(image: Image.Image) -> list[Bubble] | None:
         import numpy as np
 
         arr = np.array(image.convert("RGB"))
-        results = model(arr, verbose=False)  # type: ignore[operator]
+        results = model(arr, verbose=False)
 
         bubbles: list[Bubble] = []
         for result in results:
@@ -212,35 +181,20 @@ def _detect_yolo(image: Image.Image) -> list[Bubble] | None:
         return None
 
 
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
-
-
 def detect_bubbles(image: Image.Image) -> list[Bubble]:
-    """Return detected speech-bubble / text regions on ``image``.
-
-    Tries RT-DETR → YOLO → empty list, in order.
-    The contour-based approach has been removed because it produced
-    massive false positives that destroyed images during inpainting.
-    """
-    # 1. RT-DETR (best quality, specifically trained on manga/comics)
     result = _detect_rtdetr(image)
     if result:
         return result
 
-    # 2. YOLO (good quality with the right model)
     result = _detect_yolo(image)
     if result:
         return result
 
-    # 3. Return empty — safer than a stub that creates false positives
     log.warning("No detection backend produced results; returning empty list")
     return []
 
 
 def _guess_orientation(w: int, h: int) -> Orientation:
-    """Crude orientation hint based on bubble aspect ratio."""
     if h > w * 1.2:
         return "vertical"
     if w > h * 1.2:

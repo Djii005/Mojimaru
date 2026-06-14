@@ -1,21 +1,13 @@
-"""Sidecar loop — newline-delimited JSON over stdin/stdout.
-
-Run via ``mojimaru serve``. The Tauri desktop shell spawns this process,
-writes one JSON Request per line to stdin, and reads JSON Messages per line
-from stdout. Logs and tracebacks go to stderr only.
-"""
-
 from __future__ import annotations
 
 import json
 import os
 import sys
 
-# Disable PaddleX's slow model-source connectivity check on startup.
 os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
 import traceback
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
 
 from pydantic import TypeAdapter, ValidationError
 
@@ -46,7 +38,6 @@ MESSAGE_ADAPTER: TypeAdapter[Message] = TypeAdapter(Message)
 
 
 def _detect_backends() -> dict[str, bool]:
-    """Report which optional ML backends are importable in this interpreter."""
     backends: dict[str, bool] = {}
     for name in ("manga_ocr", "paddleocr", "ultralytics", "cv2"):
         try:
@@ -58,10 +49,8 @@ def _detect_backends() -> dict[str, bool]:
 
 
 def _detect_backend_details() -> list[BackendDetail]:
-    """Return rich backend detail for the Settings UI."""
     details: list[BackendDetail] = []
 
-    # manga-ocr
     try:
         __import__("manga_ocr")
         installed = True
@@ -77,7 +66,6 @@ def _detect_backend_details() -> list[BackendDetail]:
         )
     )
 
-    # RT-DETR comic text detector (HuggingFace)
     try:
         __import__("transformers")
         rtdetr_installed = True
@@ -93,13 +81,11 @@ def _detect_backend_details() -> list[BackendDetail]:
         )
     )
 
-    # Ultralytics YOLO
     try:
         __import__("ultralytics")
         installed = True
     except ImportError:
         installed = False
-    # Active only if a model file is found
     project_yolo = get_base_dir() / "models" / "yolo"
     has_model = bool(os.environ.get("MOJIMARU_YOLO_MODEL")) or any(
         p.exists()
@@ -121,7 +107,6 @@ def _detect_backend_details() -> list[BackendDetail]:
         )
     )
 
-    # OpenCV
     try:
         __import__("cv2")
         installed = True
@@ -141,14 +126,12 @@ def _detect_backend_details() -> list[BackendDetail]:
 
 
 def _get_translate_provider() -> str:
-    """Return the active translation provider name."""
     from mojimaru.translate import _get_provider
 
     return _get_provider()
 
 
 def _get_font_path() -> str:
-    """Return the configured font path, if any."""
     return os.environ.get("MOJIMARU_FONT_PATH", "")
 
 
@@ -157,8 +140,6 @@ def _emit(stream: TextIO, message: Message) -> None:
         stream.write(message.model_dump_json() + "\n")
         stream.flush()
     except OSError:
-        # On Windows the pipe may already be closed when Tauri shuts down
-        # the sidecar — swallow the broken-pipe error rather than crashing.
         pass
 
 
@@ -201,12 +182,12 @@ def _handle(req: Request, stdout: TextIO) -> Message:
 
     if isinstance(req, TranslateImageRequest):
 
-        def on_progress(stage: str, current: int, total: int, note: str) -> None:
+        def on_progress(stage: Any, current: int, total: int, note: str) -> None:
             _emit(
                 stdout,
                 ProgressEvent(
                     id=req.id,
-                    stage=stage,  # type: ignore[arg-type]
+                    stage=stage,
                     current=current,
                     total=total,
                     note=note,
@@ -229,12 +210,12 @@ def _handle(req: Request, stdout: TextIO) -> Message:
 
     if isinstance(req, TranslateBatchRequest):
 
-        def on_progress(stage: str, current: int, total: int, note: str) -> None:
+        def on_progress(stage: Any, current: int, total: int, note: str) -> None:
             _emit(
                 stdout,
                 ProgressEvent(
                     id=req.id,
-                    stage=stage,  # type: ignore[arg-type]
+                    stage=stage,
                     current=current,
                     total=total,
                     note=note,
@@ -259,15 +240,12 @@ def _handle(req: Request, stdout: TextIO) -> Message:
         )
 
     if isinstance(req, CancelRequest):
-        # v0: cancellation isn't wired through the pipeline yet — acknowledge
-        # so the shell can advance its UI state.
         return PongResult(id=req.id)
 
     return ErrorResult(id=req.id, message=f"unhandled request kind: {req.kind}")
 
 
 def run(stdin: TextIO = sys.stdin, stdout: TextIO = sys.stdout) -> None:
-    """Read newline-delimited JSON requests until stdin is closed."""
     for raw in stdin:
         line = raw.strip()
         if not line:

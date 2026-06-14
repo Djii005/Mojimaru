@@ -79,3 +79,16 @@ python_version = "3.10"
 strict = true
 explicit_package_bases = true
 mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = [
+    "transformers.*",
+    "ultralytics.*",
+    "manga_ocr.*",
+    "paddleocr.*",
+    "ctranslate2.*",
+    "sentencepiece.*",
+    "cv2.*",
+]
+ignore_missing_imports = true
+

@@ -1,5 +1,3 @@
-"""Command-line interface for the Mojimaru pipeline."""
-
 from __future__ import annotations
 
 import sys
@@ -36,13 +34,16 @@ TARGET_CHOICES: tuple[TargetLang, ...] = (
 )
 
 
-@click.group(context_settings={"help_option_names": ["-h", "--help"]})
+@click.group(
+    context_settings={"help_option_names": ["-h", "--help"]},
+    help="Mojimaru — manga translation pipeline.",
+)
 @click.version_option(__version__, "-V", "--version", prog_name="mojimaru")
 def main() -> None:
-    """Mojimaru — manga translation pipeline."""
+    pass
 
 
-@main.command()
+@main.command(help="Translate one image or a whole directory of images.")
 @click.option(
     "--image",
     "image",
@@ -90,7 +91,6 @@ def translate(
     target: TargetLang,
     recursive: bool,
 ) -> None:
-    """Translate one image or a whole directory of images."""
     if image and input_dir:
         raise click.UsageError("Use either --image or --in, not both.")
     if not image and not input_dir:
@@ -151,17 +151,15 @@ def translate(
         sys.exit(1)
 
 
-@main.command()
+@main.command(help="Run as a JSON sidecar (newline-delimited JSON over stdin/stdout).")
 def serve() -> None:
-    """Run as a JSON sidecar (newline-delimited JSON over stdin/stdout)."""
     from mojimaru.sidecar import run
 
     run()
 
 
-@main.command()
+@main.command(help="Show version + which ML backends are importable.")
 def info() -> None:
-    """Show version + which ML backends are importable."""
     from mojimaru.sidecar import _detect_backends
 
     backends = _detect_backends()

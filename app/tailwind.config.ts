@@ -1,10 +1,6 @@
 import type { Config } from "tailwindcss";
 
-/**
- * Mojimaru design tokens.
- * Palette is a muted washi-paper base with a vermilion (朱) accent
- * and a sakura blush for highlights.
- */
+
 const config: Config = {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   darkMode: "class",
